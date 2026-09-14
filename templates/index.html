@@ -1,0 +1,1553 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+
+    <meta charset="UTF-8">
+
+    <meta
+        name="viewport"
+        content="width=device-width, initial-scale=1.0"
+    >
+
+    <title>ScamShield-X</title>
+
+    <link
+        rel="stylesheet"
+        href="{{ url_for('static', filename='style.css') }}"
+    >
+
+    <style>
+
+        /* ==================================================
+           EXPLAINABLE AI
+           ================================================== */
+
+        .xai-meta {
+            margin-top: 10px;
+            margin-bottom: 14px;
+            font-size: 0.88rem;
+            opacity: 0.75;
+            line-height: 1.5;
+        }
+
+        .xai-item {
+            margin-bottom: 14px;
+            padding: 10px 0 10px 12px;
+        }
+
+        .xai-feature {
+            font-weight: 700;
+            font-size: 1rem;
+        }
+
+        .xai-direction {
+            font-weight: 700;
+            margin-top: 4px;
+        }
+
+        .xai-contribution {
+            opacity: 0.78;
+            font-size: 0.9rem;
+            margin-top: 4px;
+        }
+
+        .scam-feature {
+            border-left: 3px solid #ff5c75;
+        }
+
+        .legit-feature {
+            border-left: 3px solid #35d07f;
+        }
+
+        .engine-box {
+            margin-top: 15px;
+            padding: 10px 14px;
+            border-radius: 10px;
+            background: rgba(255,255,255,0.05);
+            font-size: 0.9rem;
+        }
+
+        .type-list {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 8px;
+            margin-top: 8px;
+        }
+
+        .type-badge {
+            padding: 5px 10px;
+            border-radius: 999px;
+            background: rgba(255,255,255,0.08);
+            font-size: 0.82rem;
+        }
+
+        .confidence-box {
+            margin-top: 10px;
+            font-size: 0.95rem;
+        }
+
+    </style>
+
+</head>
+
+
+<body>
+
+<div class="container">
+
+
+    <!-- ==================================================
+         HEADER
+         ================================================== -->
+
+    <header class="hero">
+
+        <div class="badge">
+            EXPLAINABLE CROSS-CHANNEL AI
+        </div>
+
+        <h1>
+            ScamShield-X
+        </h1>
+
+        <p>
+            Detect suspicious digital scam content
+            and understand why the system considers
+            a message risky.
+        </p>
+
+    </header>
+
+
+    <!-- ==================================================
+         TEXT ANALYSIS
+         ================================================== -->
+
+    <section class="card">
+
+        <h2>
+            1. Text / URL Analysis
+        </h2>
+
+        <p class="muted">
+            Choose the communication channel,
+            paste the content, and run ScamShield-X.
+        </p>
+
+
+        <div class="channel-grid">
+
+            <button
+                class="channel active"
+                data-channel="sms"
+            >
+                SMS
+            </button>
+
+            <button
+                class="channel"
+                data-channel="email"
+            >
+                Email
+            </button>
+
+            <button
+                class="channel"
+                data-channel="job"
+            >
+                Job
+            </button>
+
+            <button
+                class="channel"
+                data-channel="url"
+            >
+                URL
+            </button>
+
+            <button
+                class="channel"
+                data-channel="instagram"
+            >
+                Instagram Text
+            </button>
+
+        </div>
+
+
+        <textarea
+            id="inputText"
+            placeholder="Paste an SMS, email, job offer, URL, or Instagram caption/text..."
+        ></textarea>
+
+
+        <button
+            id="analyzeButton"
+            class="primary"
+        >
+            Analyze with AI
+        </button>
+
+    </section>
+
+
+    <!-- ==================================================
+         IMAGE ANALYSIS
+         ================================================== -->
+
+    <section class="card">
+
+        <h2>
+            2. Image + OCR + QR
+        </h2>
+
+        <p class="muted">
+            Upload a screenshot, payment message,
+            poster, or QR-code image.
+        </p>
+
+
+        <input
+            id="imageInput"
+            type="file"
+            accept=".png,.jpg,.jpeg,.webp"
+        >
+
+
+        <button
+            id="imageButton"
+            class="secondary"
+        >
+            Analyze Image
+        </button>
+
+    </section>
+
+
+    <!-- ==================================================
+         REEL ANALYSIS
+         ================================================== -->
+
+    <section class="card">
+
+        <h2>
+            3. Instagram Reel Multimodal Analysis
+        </h2>
+
+        <p class="muted">
+            Upload an authorized Reel video.
+            ScamShield-X extracts caption,
+            speech, and visible text.
+        </p>
+
+
+        <input
+            id="videoInput"
+            type="file"
+            accept=".mp4,.mov,.avi,.mkv"
+        >
+
+
+        <textarea
+            id="caption"
+            class="small-textarea"
+            placeholder="Optional: paste the Reel caption here..."
+        ></textarea>
+
+
+        <button
+            id="reelButton"
+            class="primary"
+        >
+            Analyze Instagram Reel
+        </button>
+
+
+        <div class="note">
+
+            Use a Reel video you are authorized to analyze.
+            This prototype does not scrape private Instagram content.
+
+        </div>
+
+    </section>
+
+
+    <!-- ==================================================
+         RESULT
+         ================================================== -->
+
+    <section
+        class="card result"
+        id="result"
+        hidden
+    >
+
+
+        <!-- STATUS -->
+
+        <div
+            id="status"
+            class="status"
+        ></div>
+
+
+        <!-- SUMMARY -->
+
+        <div class="summary-grid">
+
+
+            <div>
+
+                <span>
+                    Channel
+                </span>
+
+                <strong id="resultChannel">
+                    -
+                </strong>
+
+            </div>
+
+
+            <div>
+
+                <span>
+                    Language
+                </span>
+
+                <strong id="resultLanguage">
+                    -
+                </strong>
+
+            </div>
+
+
+            <div>
+
+                <span>
+                    Risk level
+                </span>
+
+                <strong id="riskLevel">
+                    -
+                </strong>
+
+            </div>
+
+
+            <div>
+
+                <span>
+                    Risk score
+                </span>
+
+                <strong id="riskScore">
+                    -
+                </strong>
+
+            </div>
+
+
+        </div>
+
+
+        <!-- RISK BAR -->
+
+        <div class="risk-bar">
+
+            <div id="riskFill"></div>
+
+        </div>
+
+
+        <!-- CONFIDENCE -->
+
+        <div
+            class="confidence-box"
+            id="confidenceBox"
+        ></div>
+
+
+        <!-- ANALYSIS ENGINE -->
+
+        <div
+            class="engine-box"
+            id="engineBox"
+        ></div>
+
+
+        <!-- SCAM TYPES -->
+
+        <div
+            id="scamTypesBox"
+            class="engine-box"
+            hidden
+        >
+
+            <strong>
+                Detected scam categories
+            </strong>
+
+            <div
+                id="scamTypes"
+                class="type-list"
+            ></div>
+
+        </div>
+
+
+        <!-- ==================================================
+             EXPLANATION COLUMNS
+             ================================================== -->
+
+        <div class="two-col">
+
+
+            <!-- RULE-BASED EVIDENCE -->
+
+            <div>
+
+                <h3>
+                    Rule-based evidence
+                </h3>
+
+                <ul id="reasonsList"></ul>
+
+            </div>
+
+
+            <!-- EXPLAINABLE AI / ML -->
+
+            <div>
+
+                <h3>
+                    Explainable AI / ML explanation
+                </h3>
+
+                <div
+                    class="xai-meta"
+                    id="xaiMeta"
+                ></div>
+
+                <ul id="xaiList"></ul>
+
+            </div>
+
+
+        </div>
+
+
+        <!-- ==================================================
+             REEL DETAILS
+             ================================================== -->
+
+        <div
+            id="reelDetails"
+            class="evidence"
+            hidden
+        >
+
+            <h3>
+                Instagram Reel evidence
+            </h3>
+
+
+            <label>
+                Caption
+            </label>
+
+            <pre id="captionOut"></pre>
+
+
+            <label>
+                Speech transcript
+            </label>
+
+            <pre id="transcriptOut"></pre>
+
+
+            <label>
+                On-screen OCR text
+            </label>
+
+            <pre id="ocrOut"></pre>
+
+
+            <label>
+                Combined model input
+            </label>
+
+            <pre id="combinedOut"></pre>
+
+        </div>
+
+
+        <!-- ==================================================
+             IMAGE DETAILS
+             ================================================== -->
+
+        <div
+            id="imageDetails"
+            class="evidence"
+            hidden
+        >
+
+            <h3>
+                Image evidence
+            </h3>
+
+
+            <label>
+                OCR text
+            </label>
+
+            <pre id="imageOcrOut"></pre>
+
+
+            <label>
+                QR content
+            </label>
+
+            <pre id="qrOut"></pre>
+
+        </div>
+
+
+        <!-- ==================================================
+             SAFETY RECOMMENDATION
+             ================================================== -->
+
+        <div class="recommendation">
+
+            <h3>
+                Safety recommendation
+            </h3>
+
+            <p id="recommendation"></p>
+
+        </div>
+
+
+    </section>
+
+
+    <!-- ==================================================
+         ERROR
+         ================================================== -->
+
+    <div
+        id="error"
+        class="error"
+        hidden
+    ></div>
+
+
+</div>
+
+
+<script>
+
+
+// ==========================================================
+// GLOBAL STATE
+// ==========================================================
+
+let selectedChannel = "sms";
+
+
+// ==========================================================
+// HELPER
+// ==========================================================
+
+function $(id) {
+    return document.getElementById(id);
+}
+
+
+// ==========================================================
+// ERROR HANDLING
+// ==========================================================
+
+function setError(message) {
+
+    $("error").textContent =
+        message || "Unknown error.";
+
+    $("error").hidden = false;
+
+}
+
+
+function clearError() {
+
+    $("error").hidden = true;
+
+}
+
+
+// ==========================================================
+// RESET OPTIONAL EVIDENCE
+// ==========================================================
+
+function resetEvidence() {
+
+    $("reelDetails").hidden = true;
+
+    $("imageDetails").hidden = true;
+
+}
+
+
+// ==========================================================
+// HTML ESCAPING
+// ==========================================================
+
+function escapeHtml(value) {
+
+    return String(value).replace(
+        /[&<>'"]/g,
+        character => ({
+
+            "&": "&amp;",
+            "<": "&lt;",
+            ">": "&gt;",
+            "'": "&#39;",
+            '"': "&quot;"
+
+        }[character])
+    );
+
+}
+
+
+// ==========================================================
+// CONFIDENCE FORMAT
+// ==========================================================
+
+function formatConfidence(value) {
+
+    const number = Number(value);
+
+    if (!Number.isFinite(number)) {
+        return "N/A";
+    }
+
+    return (
+        Math.max(
+            0,
+            Math.min(
+                100,
+                number * 100
+            )
+        ).toFixed(1)
+        + "%"
+    );
+
+}
+
+
+// ==========================================================
+// DISPLAY ANALYSIS RESULT
+// ==========================================================
+
+function displayResult(data) {
+
+    $("result").hidden = false;
+
+    resetEvidence();
+
+
+    // ------------------------------------------------------
+    // Prediction
+    // ------------------------------------------------------
+
+    const scam =
+        data.prediction === "SCAM";
+
+    const suspicious =
+        data.prediction === "SUSPICIOUS";
+
+
+    if (scam) {
+
+        $("status").textContent =
+            "🚨 SCAM DETECTED";
+
+        $("status").className =
+            "status scam";
+
+    }
+
+    else if (suspicious) {
+
+        $("status").textContent =
+            "⚠️ SUSPICIOUS CONTENT";
+
+        $("status").className =
+            "status scam";
+
+    }
+
+    else {
+
+        $("status").textContent =
+            "✅ LIKELY LEGITIMATE";
+
+        $("status").className =
+            "status safe";
+
+    }
+
+
+    // ------------------------------------------------------
+    // Summary
+    // ------------------------------------------------------
+
+    $("resultChannel").textContent =
+        data.channel || "-";
+
+
+    $("resultLanguage").textContent =
+        data.language || "-";
+
+
+    $("riskLevel").textContent =
+        data.risk_level || "-";
+
+
+    const riskScore =
+        Number(data.risk_score || 0);
+
+
+    $("riskScore").textContent =
+        riskScore.toFixed(1) + "%";
+
+
+    // Risk progress bar
+
+    $("riskFill").style.width =
+        Math.max(
+            0,
+            Math.min(
+                100,
+                riskScore
+            )
+        ) + "%";
+
+
+    // ------------------------------------------------------
+    // Confidence
+    // ------------------------------------------------------
+
+    $("confidenceBox").innerHTML =
+        "<strong>Confidence:</strong> "
+        +
+        escapeHtml(
+            formatConfidence(
+                data.confidence
+            )
+        );
+
+
+    // ------------------------------------------------------
+    // Analysis engine
+    // ------------------------------------------------------
+
+    const engine =
+        data._engine || "unknown";
+
+
+    if (engine === "openai") {
+
+        $("engineBox").innerHTML =
+            "<strong>Analysis engine:</strong> "
+            +
+            "OpenAI AI analysis";
+
+    }
+
+    else if (
+        engine === "local_fallback"
+    ) {
+
+        $("engineBox").innerHTML =
+            "<strong>Analysis engine:</strong> "
+            +
+            "Local evidence-based fallback "
+            +
+            "(OpenAI unavailable/no credits)";
+
+    }
+
+    else {
+
+        $("engineBox").innerHTML =
+            "<strong>Analysis engine:</strong> "
+            +
+            escapeHtml(
+                engine
+            );
+
+    }
+
+
+    // ------------------------------------------------------
+    // Scam categories
+    // ------------------------------------------------------
+
+    const scamTypes =
+        Array.isArray(data.scam_type)
+            ? data.scam_type
+            : [];
+
+
+    if (scamTypes.length > 0) {
+
+        $("scamTypesBox").hidden =
+            false;
+
+
+        $("scamTypes").innerHTML =
+            "";
+
+
+        scamTypes.forEach(
+            type => {
+
+                const badge =
+                    document.createElement(
+                        "span"
+                    );
+
+
+                badge.className =
+                    "type-badge";
+
+
+                badge.textContent =
+                    String(type)
+                        .replaceAll(
+                            "_",
+                            " "
+                        )
+                        .replace(
+                            /\b\w/g,
+                            c => c.toUpperCase()
+                        );
+
+
+                $("scamTypes")
+                    .appendChild(
+                        badge
+                    );
+
+            }
+        );
+
+    }
+
+    else {
+
+        $("scamTypesBox").hidden =
+            true;
+
+    }
+
+
+    // ======================================================
+    // RULE-BASED EXPLANATION
+    // ======================================================
+
+    const reasons =
+        $("reasonsList");
+
+
+    reasons.innerHTML =
+        "";
+
+
+    const evidence =
+        data.reasons ||
+        data.evidence ||
+        [];
+
+
+    if (
+        Array.isArray(evidence)
+        &&
+        evidence.length > 0
+    ) {
+
+        evidence.forEach(
+            reason => {
+
+                const li =
+                    document.createElement(
+                        "li"
+                    );
+
+
+                li.textContent =
+                    reason;
+
+
+                reasons.appendChild(
+                    li
+                );
+
+            }
+        );
+
+    }
+
+    else {
+
+        const li =
+            document.createElement(
+                "li"
+            );
+
+
+        li.textContent =
+            "No strong scam indicators were detected.";
+
+
+        reasons.appendChild(
+            li
+        );
+
+    }
+
+
+    // ======================================================
+    // EXPLAINABLE AI / ML
+    // ======================================================
+
+    const xai =
+        $("xaiList");
+
+
+    xai.innerHTML =
+        "";
+
+
+    const xaiData =
+        Array.isArray(data.xai)
+            ? data.xai
+            : [];
+
+
+    // ------------------------------------------------------
+    // Explanation source
+    // ------------------------------------------------------
+
+    if (
+        data.xai_source ===
+        "trained_unified_ml_model"
+    ) {
+
+        $("xaiMeta").textContent =
+            "Learned feature contribution from the trained unified ML model.";
+
+    }
+
+    else {
+
+        $("xaiMeta").textContent =
+            "Evidence-based explanation generated from detected scam signals.";
+
+    }
+
+
+    // ------------------------------------------------------
+    // No explanation
+    // ------------------------------------------------------
+
+    if (xaiData.length === 0) {
+
+        const li =
+            document.createElement(
+                "li"
+            );
+
+
+        li.textContent =
+            "No explanation features were returned.";
+
+
+        xai.appendChild(
+            li
+        );
+
+    }
+
+
+    // ------------------------------------------------------
+    // Display every XAI feature
+    // ------------------------------------------------------
+
+    xaiData.forEach(
+        item => {
+
+
+            const li =
+                document.createElement(
+                    "li"
+                );
+
+
+            // ------------------------------------------------
+            // Direction class
+            // ------------------------------------------------
+
+            li.className =
+                item.direction === "SCAM"
+                    ? "xai-item scam-feature"
+                    : "xai-item legit-feature";
+
+
+            // ------------------------------------------------
+            // Feature
+            // ------------------------------------------------
+
+            const feature =
+                escapeHtml(
+                    item.feature ||
+                    "Unknown feature"
+                );
+
+
+            // ------------------------------------------------
+            // Direction
+            // ------------------------------------------------
+
+            const direction =
+                escapeHtml(
+                    item.direction ||
+                    "SIGNAL"
+                );
+
+
+            // ------------------------------------------------
+            // Numerical contribution
+            // ------------------------------------------------
+
+            const rawContribution =
+                Number(
+                    item.contribution ?? 0
+                );
+
+
+            const contribution =
+                Number.isFinite(
+                    rawContribution
+                )
+                    ? rawContribution
+                    : 0;
+
+
+            // ------------------------------------------------
+            // Show + for positive contribution
+            // ------------------------------------------------
+
+            const contributionText =
+                contribution >= 0
+                    ? "+"
+                      +
+                      contribution.toFixed(5)
+                    : contribution.toFixed(5);
+
+
+            // ------------------------------------------------
+            // Strength
+            // ------------------------------------------------
+
+            const strength =
+                escapeHtml(
+                    item.strength ||
+                    "Model signal"
+                );
+
+
+            // ------------------------------------------------
+            // Human-readable explanation
+            // ------------------------------------------------
+
+            li.innerHTML =
+                `
+                <div class="xai-feature">
+                    Feature: "${feature}"
+                </div>
+
+                <div class="xai-direction">
+                    Influence: ${direction}
+                </div>
+
+                <div class="xai-contribution">
+                    Contribution: ${contributionText}
+                    · ${strength}
+                </div>
+                `;
+
+
+            xai.appendChild(
+                li
+            );
+
+        }
+    );
+
+
+    // ======================================================
+    // SAFETY RECOMMENDATION
+    // ======================================================
+
+    $("recommendation").textContent =
+        data.recommendation ||
+        "";
+
+
+    // ======================================================
+    // INSTAGRAM REEL DETAILS
+    // ======================================================
+
+    if (
+        data.channel === "instagram"
+    ) {
+
+        $("reelDetails").hidden =
+            false;
+
+
+        $("captionOut").textContent =
+            data.caption ||
+            "No caption supplied.";
+
+
+        $("transcriptOut").textContent =
+            data.transcript ||
+            "No speech transcript extracted.";
+
+
+        $("ocrOut").textContent =
+            data.ocr_text ||
+            "No on-screen text extracted.";
+
+
+        $("combinedOut").textContent =
+            data.combined_text ||
+            "";
+
+    }
+
+
+    // ======================================================
+    // IMAGE DETAILS
+    // ======================================================
+
+    if (
+        data.channel === "image"
+    ) {
+
+        $("imageDetails").hidden =
+            false;
+
+
+        $("imageOcrOut").textContent =
+            data.ocr_text ||
+            "No OCR text.";
+
+
+        $("qrOut").textContent =
+            (
+                data.qr_data || []
+            ).join("\n")
+            ||
+            "No QR code detected.";
+
+    }
+
+}
+
+
+// ==========================================================
+// CHANNEL SELECTION
+// ==========================================================
+
+document
+    .querySelectorAll(".channel")
+    .forEach(
+        button => {
+
+            button.addEventListener(
+                "click",
+                () => {
+
+
+                    document
+                        .querySelectorAll(
+                            ".channel"
+                        )
+                        .forEach(
+                            b =>
+                                b.classList.remove(
+                                    "active"
+                                )
+                        );
+
+
+                    button.classList.add(
+                        "active"
+                    );
+
+
+                    selectedChannel =
+                        button.dataset.channel;
+
+                }
+            );
+
+        }
+    );
+
+
+// ==========================================================
+// TEXT ANALYSIS
+// ==========================================================
+
+$("analyzeButton")
+    .addEventListener(
+        "click",
+        async () => {
+
+
+            clearError();
+
+
+            const text =
+                $("inputText")
+                    .value
+                    .trim();
+
+
+            if (!text) {
+
+                setError(
+                    "Enter text before analyzing."
+                );
+
+                return;
+
+            }
+
+
+            const button =
+                $("analyzeButton");
+
+
+            button.disabled =
+                true;
+
+
+            button.textContent =
+                "Analyzing...";
+
+
+            try {
+
+
+                const response =
+                    await fetch(
+                        "/analyze",
+                        {
+                            method: "POST",
+
+                            headers: {
+                                "Content-Type":
+                                    "application/json"
+                            },
+
+                            body:
+                                JSON.stringify(
+                                    {
+                                        text: text,
+                                        channel:
+                                            selectedChannel
+                                    }
+                                )
+                        }
+                    );
+
+
+                const data =
+                    await response.json();
+
+
+                if (!response.ok) {
+
+                    throw new Error(
+                        data.error ||
+                        "Analysis failed."
+                    );
+
+                }
+
+
+                displayResult(
+                    data
+                );
+
+
+            }
+
+            catch (error) {
+
+                setError(
+                    error.message
+                );
+
+            }
+
+            finally {
+
+                button.disabled =
+                    false;
+
+
+                button.textContent =
+                    "Analyze with AI";
+
+            }
+
+        }
+    );
+
+
+// ==========================================================
+// IMAGE ANALYSIS
+// ==========================================================
+
+$("imageButton")
+    .addEventListener(
+        "click",
+        async () => {
+
+
+            clearError();
+
+
+            const file =
+                $("imageInput")
+                    .files[0];
+
+
+            if (!file) {
+
+                setError(
+                    "Select an image first."
+                );
+
+                return;
+
+            }
+
+
+            const button =
+                $("imageButton");
+
+
+            button.disabled =
+                true;
+
+
+            button.textContent =
+                "Reading OCR + QR...";
+
+
+            const form =
+                new FormData();
+
+
+            form.append(
+                "image",
+                file
+            );
+
+
+            try {
+
+
+                const response =
+                    await fetch(
+                        "/analyze-image",
+                        {
+                            method: "POST",
+                            body: form
+                        }
+                    );
+
+
+                const data =
+                    await response.json();
+
+
+                if (!response.ok) {
+
+                    throw new Error(
+                        data.error ||
+                        "Image analysis failed."
+                    );
+
+                }
+
+
+                displayResult(
+                    data
+                );
+
+
+            }
+
+            catch (error) {
+
+                setError(
+                    error.message
+                );
+
+            }
+
+            finally {
+
+                button.disabled =
+                    false;
+
+
+                button.textContent =
+                    "Analyze Image";
+
+            }
+
+        }
+    );
+
+
+// ==========================================================
+// INSTAGRAM REEL ANALYSIS
+// ==========================================================
+
+$("reelButton")
+    .addEventListener(
+        "click",
+        async () => {
+
+
+            clearError();
+
+
+            const file =
+                $("videoInput")
+                    .files[0];
+
+
+            if (!file) {
+
+                setError(
+                    "Select an Instagram Reel video first."
+                );
+
+                return;
+
+            }
+
+
+            const button =
+                $("reelButton");
+
+
+            button.disabled =
+                true;
+
+
+            button.textContent =
+                "Extracting audio + OCR + analyzing...";
+
+
+            const form =
+                new FormData();
+
+
+            form.append(
+                "video",
+                file
+            );
+
+
+            form.append(
+                "caption",
+                $("caption").value
+            );
+
+
+            try {
+
+
+                const response =
+                    await fetch(
+                        "/analyze-reel",
+                        {
+                            method: "POST",
+                            body: form
+                        }
+                    );
+
+
+                const data =
+                    await response.json();
+
+
+                if (!response.ok) {
+
+                    throw new Error(
+                        data.error ||
+                        "Reel analysis failed."
+                    );
+
+                }
+
+
+                displayResult(
+                    data
+                );
+
+
+            }
+
+            catch (error) {
+
+                setError(
+                    error.message
+                );
+
+            }
+
+            finally {
+
+                button.disabled =
+                    false;
+
+
+                button.textContent =
+                    "Analyze Instagram Reel";
+
+            }
+
+        }
+    );
+
+</script>
+
+</body>
+
+</html>

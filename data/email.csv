@@ -1,0 +1,7 @@
+text,label
+"Dear customer, your account has been suspended. Verify your password immediately.",scam
+"You have won a cash reward. Send your bank details to receive it.",scam
+"Urgent payment required to avoid account closure.",scam
+"Please find the project report attached for tomorrow's meeting.",legit
+"Your invoice for this month is attached.",legit
+"Thank you for applying. We will contact you regarding the interview.",legit

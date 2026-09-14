@@ -1,0 +1,44 @@
+{
+  "accuracy": 0.7777777777777778,
+  "precision": 0.6666666666666666,
+  "recall": 1.0,
+  "f1": 0.8,
+  "confusion_matrix": [
+    [
+      3,
+      2
+    ],
+    [
+      0,
+      4
+    ]
+  ],
+  "test_size": 9,
+  "channel_results": {
+    "email": {
+      "samples": 1,
+      "accuracy": 1.0,
+      "f1": 0.0
+    },
+    "instagram": {
+      "samples": 2,
+      "accuracy": 1.0,
+      "f1": 1.0
+    },
+    "job": {
+      "samples": 2,
+      "accuracy": 1.0,
+      "f1": 1.0
+    },
+    "sms": {
+      "samples": 1,
+      "accuracy": 1.0,
+      "f1": 1.0
+    },
+    "url": {
+      "samples": 3,
+      "accuracy": 0.3333333333333333,
+      "f1": 0.5
+    }
+  }
+}
