@@ -1,0 +1,539 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ScamShield-X | AI Scam Detection</title>
+
+    <!-- Netlify-compatible CSS path -->
+    <link rel="stylesheet" href="/static/style.css">
+
+    <style>
+        .xai-meta {
+            margin: 10px 0 14px;
+            font-size: .88rem;
+            opacity: .75;
+            line-height: 1.5;
+        }
+
+        .xai-item {
+            margin-bottom: 14px;
+            padding: 10px 0 10px 12px;
+        }
+
+        .xai-feature { font-weight: 700; }
+        .xai-direction { font-weight: 700; margin-top: 4px; }
+        .xai-contribution { opacity: .78; font-size: .9rem; margin-top: 4px; }
+        .scam-feature { border-left: 3px solid #ff5c75; }
+        .legit-feature { border-left: 3px solid #35d07f; }
+
+        .engine-box {
+            margin-top: 15px;
+            padding: 10px 14px;
+            border-radius: 10px;
+            background: rgba(128,128,128,.12);
+            font-size: .9rem;
+        }
+
+        .type-list {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 8px;
+            margin-top: 8px;
+        }
+
+        .type-badge {
+            padding: 5px 10px;
+            border-radius: 999px;
+            background: rgba(128,128,128,.15);
+            font-size: .82rem;
+        }
+
+        .confidence-box { margin-top: 10px; }
+        .error {
+            color: #d93025;
+            padding: 12px;
+            margin-top: 12px;
+            white-space: pre-wrap;
+        }
+
+        button:disabled { opacity: .6; cursor: wait; }
+        [hidden] { display: none !important; }
+
+        .risk-bar {
+            height: 10px;
+            background: rgba(128,128,128,.2);
+            border-radius: 8px;
+            overflow: hidden;
+            margin-top: 12px;
+        }
+
+        #riskFill {
+            height: 100%;
+            width: 0;
+            background: #ff5c75;
+            transition: width .3s;
+        }
+
+        pre {
+            white-space: pre-wrap;
+            overflow-wrap: anywhere;
+        }
+
+        .status {
+            font-weight: bold;
+            font-size: 1.2rem;
+            margin-bottom: 16px;
+        }
+
+        .status.safe { color: #20a464; }
+        .status.scam { color: #e7475b; }
+    </style>
+</head>
+
+<body>
+<div class="container">
+
+    <header class="hero">
+        <div class="badge">EXPLAINABLE CROSS-CHANNEL AI</div>
+        <h1>ScamShield-X</h1>
+        <p>
+            Detect suspicious digital scam content and understand
+            why a message may be risky.
+        </p>
+    </header>
+
+    <!-- TEXT ANALYSIS -->
+    <section class="card">
+        <h2>1. Text / URL Analysis</h2>
+        <p class="muted">
+            Choose a channel, paste the content, and analyze it.
+        </p>
+
+        <div class="channel-grid">
+            <button class="channel active" data-channel="sms">SMS</button>
+            <button class="channel" data-channel="email">Email</button>
+            <button class="channel" data-channel="job">Job</button>
+            <button class="channel" data-channel="url">URL</button>
+            <button class="channel" data-channel="instagram">Instagram Text</button>
+        </div>
+
+        <textarea id="inputText"
+            placeholder="Paste an SMS, email, job offer, URL or Instagram text..."></textarea>
+
+        <button id="analyzeButton" class="primary">Analyze with AI</button>
+    </section>
+
+    <!-- IMAGE ANALYSIS -->
+    <section class="card">
+        <h2>2. Image + OCR + QR</h2>
+        <p class="muted">
+            Upload a screenshot, payment message, poster or QR-code image.
+        </p>
+
+        <input id="imageInput" type="file"
+            accept=".png,.jpg,.jpeg,.webp,image/*">
+
+        <button id="imageButton" class="secondary">Analyze Image</button>
+    </section>
+
+    <!-- REEL ANALYSIS -->
+    <section class="card">
+        <h2>3. Instagram Reel Analysis</h2>
+        <p class="muted">
+            Upload a video to analyze its caption, speech and visible text.
+        </p>
+
+        <input id="videoInput" type="file"
+            accept=".mp4,.mov,.avi,.mkv,video/*">
+
+        <textarea id="caption" class="small-textarea"
+            placeholder="Optional: paste the Reel caption here..."></textarea>
+
+        <button id="reelButton" class="primary">
+            Analyze Instagram Reel
+        </button>
+
+        <p class="note">
+            Upload only a video you are authorized to analyze.
+        </p>
+    </section>
+
+    <!-- RESULTS -->
+    <section class="card result" id="result" hidden>
+        <div id="status" class="status"></div>
+
+        <div class="summary-grid">
+            <div><span>Channel</span><strong id="resultChannel">-</strong></div>
+            <div><span>Language</span><strong id="resultLanguage">-</strong></div>
+            <div><span>Risk level</span><strong id="riskLevel">-</strong></div>
+            <div><span>Risk score</span><strong id="riskScore">-</strong></div>
+        </div>
+
+        <div class="risk-bar"><div id="riskFill"></div></div>
+        <div id="confidenceBox" class="confidence-box"></div>
+        <div id="engineBox" class="engine-box"></div>
+
+        <div id="scamTypesBox" class="engine-box" hidden>
+            <strong>Detected scam categories</strong>
+            <div id="scamTypes" class="type-list"></div>
+        </div>
+
+        <div class="two-col">
+            <div>
+                <h3>Rule-based evidence</h3>
+                <ul id="reasonsList"></ul>
+            </div>
+
+            <div>
+                <h3>Explainable AI / ML explanation</h3>
+                <div id="xaiMeta" class="xai-meta"></div>
+                <ul id="xaiList"></ul>
+            </div>
+        </div>
+
+        <div id="reelDetails" class="evidence" hidden>
+            <h3>Instagram Reel evidence</h3>
+            <label>Caption</label><pre id="captionOut"></pre>
+            <label>Speech transcript</label><pre id="transcriptOut"></pre>
+            <label>On-screen OCR text</label><pre id="ocrOut"></pre>
+            <label>Combined model input</label><pre id="combinedOut"></pre>
+        </div>
+
+        <div id="imageDetails" class="evidence" hidden>
+            <h3>Image evidence</h3>
+            <label>OCR text</label><pre id="imageOcrOut"></pre>
+            <label>QR content</label><pre id="qrOut"></pre>
+        </div>
+
+        <div class="recommendation">
+            <h3>Safety recommendation</h3>
+            <p id="recommendation"></p>
+        </div>
+    </section>
+
+    <div id="error" class="error" role="alert" hidden></div>
+</div>
+
+<script>
+"use strict";
+
+/*
+ * IMPORTANT:
+ * Keep API_BASE empty for now.
+ * Once your Flask backend is deployed, put its base URL here.
+ * Example: const API_BASE = "https://your-backend.example.com";
+ */
+const API_BASE = "";
+
+function apiUrl(path) {
+    return `${API_BASE}${path}`;
+}
+
+let selectedChannel = "sms";
+
+const $ = id => document.getElementById(id);
+
+function setError(message) {
+    $("error").textContent = message || "An unknown error occurred.";
+    $("error").hidden = false;
+}
+
+function clearError() {
+    $("error").textContent = "";
+    $("error").hidden = true;
+}
+
+function resetEvidence() {
+    $("reelDetails").hidden = true;
+    $("imageDetails").hidden = true;
+    $("scamTypesBox").hidden = true;
+}
+
+function formatConfidence(value) {
+    let number = Number(value);
+
+    if (!Number.isFinite(number)) return "N/A";
+
+    // Supports confidence returned as either 0-1 or 0-100.
+    if (number <= 1) number *= 100;
+
+    return Math.max(0, Math.min(100, number)).toFixed(1) + "%";
+}
+
+function addListItem(list, text) {
+    const li = document.createElement("li");
+    li.textContent = String(text);
+    list.appendChild(li);
+}
+
+function displayResult(data) {
+    $("result").hidden = false;
+    resetEvidence();
+
+    const prediction = String(data.prediction || "UNKNOWN").toUpperCase();
+    const status = $("status");
+
+    if (prediction === "SCAM") {
+        status.textContent = "🚨 SCAM DETECTED";
+        status.className = "status scam";
+    } else if (prediction === "SUSPICIOUS") {
+        status.textContent = "⚠️ SUSPICIOUS CONTENT";
+        status.className = "status scam";
+    } else if (
+        prediction === "SAFE" ||
+        prediction === "LEGITIMATE" ||
+        prediction === "LIKELY LEGITIMATE"
+    ) {
+        status.textContent = "✅ LIKELY LEGITIMATE";
+        status.className = "status safe";
+    } else {
+        status.textContent = "Analysis result: " + prediction;
+        status.className = "status";
+    }
+
+    $("resultChannel").textContent = data.channel || "-";
+    $("resultLanguage").textContent = data.language || "-";
+    $("riskLevel").textContent = data.risk_level || "-";
+
+    let score = Number(data.risk_score ?? 0);
+    if (!Number.isFinite(score)) score = 0;
+    score = Math.max(0, Math.min(100, score));
+
+    $("riskScore").textContent = score.toFixed(1) + "%";
+    $("riskFill").style.width = score + "%";
+
+    $("confidenceBox").textContent =
+        "Confidence: " + formatConfidence(data.confidence);
+
+    $("engineBox").textContent =
+        "Analysis engine: " + (data._engine || "unknown");
+
+    const types = Array.isArray(data.scam_type) ? data.scam_type : [];
+    const typeContainer = $("scamTypes");
+    typeContainer.replaceChildren();
+
+    if (types.length) {
+        $("scamTypesBox").hidden = false;
+
+        types.forEach(type => {
+            const badge = document.createElement("span");
+            badge.className = "type-badge";
+            badge.textContent = String(type).replaceAll("_", " ");
+            typeContainer.appendChild(badge);
+        });
+    }
+
+    const reasonsList = $("reasonsList");
+    reasonsList.replaceChildren();
+
+    const reasons = data.reasons || data.evidence || [];
+    if (Array.isArray(reasons) && reasons.length) {
+        reasons.forEach(reason => addListItem(reasonsList, reason));
+    } else {
+        addListItem(reasonsList, "No specific evidence was returned.");
+    }
+
+    const xaiList = $("xaiList");
+    xaiList.replaceChildren();
+
+    const xai = Array.isArray(data.xai) ? data.xai : [];
+
+    $("xaiMeta").textContent =
+        data.xai_source === "trained_unified_ml_model"
+            ? "Feature contributions from the trained machine-learning model."
+            : "Evidence-based explanation returned by the analysis system.";
+
+    if (!xai.length) {
+        addListItem(xaiList, "No explanation features were returned.");
+    }
+
+    xai.forEach(item => {
+        const li = document.createElement("li");
+        li.className = "xai-item " +
+            (item.direction === "SCAM" ? "scam-feature" : "legit-feature");
+
+        const feature = document.createElement("div");
+        feature.className = "xai-feature";
+        feature.textContent = "Feature: " + (item.feature || "Unknown");
+
+        const direction = document.createElement("div");
+        direction.className = "xai-direction";
+        direction.textContent = "Influence: " + (item.direction || "SIGNAL");
+
+        const contribution = document.createElement("div");
+        contribution.className = "xai-contribution";
+
+        let amount = Number(item.contribution ?? 0);
+        if (!Number.isFinite(amount)) amount = 0;
+
+        contribution.textContent =
+            "Contribution: " + (amount >= 0 ? "+" : "") +
+            amount.toFixed(5) + " · " + (item.strength || "Model signal");
+
+        li.append(feature, direction, contribution);
+        xaiList.appendChild(li);
+    });
+
+    $("recommendation").textContent =
+        data.recommendation || "Verify the information using an official source.";
+
+    if (String(data.channel || "").toLowerCase() === "instagram") {
+        $("reelDetails").hidden = false;
+        $("captionOut").textContent = data.caption || "No caption supplied.";
+        $("transcriptOut").textContent =
+            data.transcript || "No speech transcript extracted.";
+        $("ocrOut").textContent =
+            data.ocr_text || "No on-screen text extracted.";
+        $("combinedOut").textContent = data.combined_text || "";
+    }
+
+    if (String(data.channel || "").toLowerCase() === "image") {
+        $("imageDetails").hidden = false;
+        $("imageOcrOut").textContent = data.ocr_text || "No OCR text.";
+        $("qrOut").textContent = Array.isArray(data.qr_data)
+            ? data.qr_data.join("\n") || "No QR code detected."
+            : data.qr_data || "No QR code detected.";
+    }
+
+    $("result").scrollIntoView({ behavior: "smooth", block: "start" });
+}
+
+async function sendRequest(path, options) {
+    const response = await fetch(apiUrl(path), options);
+    const contentType = response.headers.get("content-type") || "";
+
+    if (!contentType.includes("application/json")) {
+        if (!response.ok) {
+            throw new Error(
+                "The backend is not connected or returned an error. " +
+                "Your Netlify frontend needs a deployed Flask backend."
+            );
+        }
+
+        throw new Error("The server did not return JSON.");
+    }
+
+    const data = await response.json();
+
+    if (!response.ok) {
+        throw new Error(data.error || "Analysis request failed.");
+    }
+
+    return data;
+}
+
+document.querySelectorAll(".channel").forEach(button => {
+    button.addEventListener("click", () => {
+        document.querySelectorAll(".channel").forEach(item => {
+            item.classList.remove("active");
+        });
+
+        button.classList.add("active");
+        selectedChannel = button.dataset.channel;
+    });
+});
+
+// TEXT ANALYSIS
+$("analyzeButton").addEventListener("click", async () => {
+    clearError();
+
+    const text = $("inputText").value.trim();
+
+    if (!text) {
+        setError("Enter text before analyzing.");
+        return;
+    }
+
+    const button = $("analyzeButton");
+    button.disabled = true;
+    button.textContent = "Analyzing...";
+
+    try {
+        const data = await sendRequest("/analyze", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+                text,
+                channel: selectedChannel
+            })
+        });
+
+        displayResult(data);
+    } catch (error) {
+        setError(error.message);
+    } finally {
+        button.disabled = false;
+        button.textContent = "Analyze with AI";
+    }
+});
+
+// IMAGE + OCR + QR ANALYSIS
+$("imageButton").addEventListener("click", async () => {
+    clearError();
+
+    const file = $("imageInput").files[0];
+
+    if (!file) {
+        setError("Please select an image first.");
+        return;
+    }
+
+    const button = $("imageButton");
+    button.disabled = true;
+    button.textContent = "Analyzing image...";
+
+    const form = new FormData();
+    form.append("image", file);
+
+    try {
+        const data = await sendRequest("/analyze-image", {
+            method: "POST",
+            body: form
+        });
+
+        displayResult(data);
+    } catch (error) {
+        setError(error.message);
+    } finally {
+        button.disabled = false;
+        button.textContent = "Analyze Image";
+    }
+});
+
+// INSTAGRAM REEL ANALYSIS
+$("reelButton").addEventListener("click", async () => {
+    clearError();
+
+    const file = $("videoInput").files[0];
+
+    if (!file) {
+        setError("Please select a video first.");
+        return;
+    }
+
+    const button = $("reelButton");
+    button.disabled = true;
+    button.textContent = "Analyzing video...";
+
+    const form = new FormData();
+    form.append("video", file);
+    form.append("caption", $("caption").value);
+
+    try {
+        const data = await sendRequest("/analyze-reel", {
+            method: "POST",
+            body: form
+        });
+
+        displayResult(data);
+    } catch (error) {
+        setError(error.message);
+    } finally {
+        button.disabled = false;
+        button.textContent = "Analyze Instagram Reel";
+    }
+});
+</script>
+</body>
+</html>
