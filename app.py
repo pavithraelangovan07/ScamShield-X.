@@ -1,3 +1,4 @@
+
 import os
 import uuid
 from pathlib import Path
@@ -6,6 +7,7 @@ from flask import Flask, jsonify, render_template, request
 from werkzeug.utils import secure_filename
 
 from src.ai_detector import analyze_with_ai
+from src.predict import predict_text
 from src.multilingual import detect_language, find_multilingual_keywords
 from src.ocr import extract_multilingual_text
 from src.qr_scanner import scan_qr_code
@@ -60,17 +62,66 @@ ALLOWED_CHANNELS = {
 
 
 # ============================================================
+# TRAINED ML MODEL
+# ============================================================
+
+def analyze_with_trained_model(text, channel):
+
+    ml_result = predict_text(text, channel)
+
+    prediction = ml_result.get(
+        "prediction",
+        "SUSPICIOUS"
+    )
+
+    ml_probability = float(
+        ml_result.get("ml_probability", 0)
+    )
+
+    confidence = (
+        ml_probability
+        if prediction == "SCAM"
+        else 100 - ml_probability
+    )
+
+    rule_evidence = ml_result.get(
+        "rule_evidence",
+        []
+    )
+
+    reasons = [
+        item.get("reason", "Risk indicator detected")
+        for item in rule_evidence
+        if isinstance(item, dict)
+    ]
+
+    red_flags = [
+        item.get("matched", "")
+        for item in rule_evidence
+        if isinstance(item, dict) and item.get("matched")
+    ]
+
+    return {
+        "prediction": prediction,
+        "risk_score": ml_result.get("risk_score", 0),
+        "risk_level": ml_result.get("risk_level", "UNKNOWN"),
+        "confidence": round(confidence, 2),
+        "scam_type": ml_result.get("categories", []),
+        "reasons": reasons,
+        "red_flags": red_flags,
+        "evidence": reasons,
+        "ml_probability": ml_probability,
+        "rule_score": ml_result.get("rule_score", 0),
+        "channel": channel,
+        "_engine": "trained_unified_ml_model"
+    }
+
+
+# ============================================================
 # OPTIONAL ML EXPLANATION
 # ============================================================
 
 def get_ml_explanation(text, channel):
-    """
-    Try to obtain feature-level explanation from the trained
-    unified ML model.
-
-    If the model has not been trained yet, return an empty list
-    so the application can use the AI/local evidence explanation.
-    """
 
     try:
 
@@ -99,13 +150,6 @@ def get_ml_explanation(text, channel):
 # ============================================================
 
 def build_fallback_xai(result, text):
-    """
-    Build an explainable evidence list when the trained
-    unified ML model is unavailable.
-
-    This prevents the ML explanation panel from being empty
-    when the OpenAI API is unavailable.
-    """
 
     xai = []
 
@@ -129,11 +173,6 @@ def build_fallback_xai(result, text):
         [],
     )
 
-
-    # --------------------------------------------------------
-    # Red flags
-    # --------------------------------------------------------
-
     for flag in red_flags[:5]:
 
         xai.append(
@@ -143,11 +182,6 @@ def build_fallback_xai(result, text):
                 "contribution": "evidence signal",
             }
         )
-
-
-    # --------------------------------------------------------
-    # Scam categories
-    # --------------------------------------------------------
 
     for scam_type in scam_types[:4]:
 
@@ -165,11 +199,6 @@ def build_fallback_xai(result, text):
                 "contribution": "detected scam category",
             }
         )
-
-
-    # --------------------------------------------------------
-    # Evidence
-    # --------------------------------------------------------
 
     existing_features = {
         str(item.get("feature", "")).lower()
@@ -196,11 +225,6 @@ def build_fallback_xai(result, text):
             }
         )
 
-
-    # --------------------------------------------------------
-    # Legitimate case
-    # --------------------------------------------------------
-
     if not xai:
 
         if result.get("prediction") == "LEGITIMATE":
@@ -222,7 +246,6 @@ def build_fallback_xai(result, text):
                     "contribution": "combined evidence",
                 }
             )
-
 
     return xai[:10]
 
@@ -270,17 +293,9 @@ def enrich_result(
     channel,
 ):
 
-    # --------------------------------------------------------
-    # Basic information
-    # --------------------------------------------------------
-
     result["channel"] = channel
 
-
-    # --------------------------------------------------------
-    # Language
-    # --------------------------------------------------------
-
+    # Language detection
     try:
 
         language = detect_language(
@@ -302,11 +317,7 @@ def enrich_result(
         result["language"] = "Unknown"
         result["language_code"] = "unknown"
 
-
-    # --------------------------------------------------------
     # Multilingual keywords
-    # --------------------------------------------------------
-
     try:
 
         result["multilingual_keywords"] = (
@@ -319,16 +330,11 @@ def enrich_result(
 
         result["multilingual_keywords"] = []
 
-
-    # --------------------------------------------------------
     # ML / XAI explanation
-    # --------------------------------------------------------
-
     ml_xai = get_ml_explanation(
         original_text,
         channel,
     )
-
 
     if ml_xai:
 
@@ -349,11 +355,7 @@ def enrich_result(
             "evidence_based_explanation"
         )
 
-
-    # --------------------------------------------------------
     # Safety recommendation
-    # --------------------------------------------------------
-
     result["recommendation"] = (
         make_recommendation(
             result.get("risk_score", 0),
@@ -361,36 +363,23 @@ def enrich_result(
         )
     )
 
-
-    # --------------------------------------------------------
     # Ensure confidence exists
-    # --------------------------------------------------------
-
     if "confidence" not in result:
 
         result["confidence"] = 0.0
 
-
-    # --------------------------------------------------------
     # Ensure scam type exists
-    # --------------------------------------------------------
-
     if "scam_type" not in result:
 
         result["scam_type"] = []
 
-
-    # --------------------------------------------------------
     # Ensure reasons exist
-    # --------------------------------------------------------
-
     if not result.get("reasons"):
 
         result["reasons"] = [
             "No strong scam indicators were detected "
             "in the supplied content."
         ]
-
 
     return result
 
@@ -417,7 +406,7 @@ def health():
     return jsonify(
         {
             "status": "ok",
-            "ai_engine": "OpenAI + local fallback",
+            "ai_engine": "Trained ML + AI/local fallback",
             "xai": "ML feature explanation + evidence fallback",
         }
     )
@@ -458,42 +447,29 @@ def analyze_text():
         )
     ).lower().strip()
 
-
-    # --------------------------------------------------------
     # Validation
-    # --------------------------------------------------------
-
     if not text:
 
         return jsonify(
             {
-                "error": (
-                    "Please enter text to analyze."
-                )
+                "error": "Please enter text to analyze."
             }
         ), 400
-
 
     if channel not in ALLOWED_CHANNELS:
 
         return jsonify(
             {
-                "error": (
-                    f"Unsupported channel: {channel}"
-                )
+                "error": f"Unsupported channel: {channel}"
             }
         ), 400
 
-
-    # --------------------------------------------------------
-    # AI ANALYSIS
-    # --------------------------------------------------------
-
+    # Main trained ML analysis
     try:
 
-        result = analyze_with_ai(
-            content=text,
-            channel=channel,
+        result = analyze_with_trained_model(
+            text,
+            channel
         )
 
         result = enrich_result(
@@ -506,14 +482,38 @@ def analyze_text():
             result
         )
 
-
     except Exception as exc:
 
-        return jsonify(
-            {
-                "error": str(exc)
-            }
-        ), 500
+        print(
+            "[ScamShield-X] Trained ML model error:",
+            str(exc)
+        )
+
+        # Existing AI/local detector as backup
+        try:
+
+            result = analyze_with_ai(
+                content=text,
+                channel=channel,
+            )
+
+            result = enrich_result(
+                result,
+                text,
+                channel,
+            )
+
+            return jsonify(
+                result
+            )
+
+        except Exception as backup_error:
+
+            return jsonify(
+                {
+                    "error": str(backup_error)
+                }
+            ), 500
 
 
 # ============================================================
@@ -530,17 +530,13 @@ def analyze_image():
         "image"
     )
 
-
     if image is None or image.filename == "":
 
         return jsonify(
             {
-                "error": (
-                    "Please select an image."
-                )
+                "error": "Please select an image."
             }
         ), 400
-
 
     filename_lower = (
         image.filename.lower()
@@ -560,13 +556,11 @@ def analyze_image():
             }
         ), 400
 
-
     suffix = Path(
         secure_filename(
             image.filename
         )
     ).suffix.lower()
-
 
     filename = (
         f"{uuid.uuid4().hex}{suffix}"
@@ -576,34 +570,23 @@ def analyze_image():
         UPLOAD_FOLDER / filename
     )
 
-
     try:
 
         image.save(
             image_path
         )
 
-
-        # ----------------------------------------------------
         # OCR
-        # ----------------------------------------------------
-
         ocr = extract_multilingual_text(
             image_path
         )
 
-
-        # ----------------------------------------------------
         # QR
-        # ----------------------------------------------------
-
         qr = scan_qr_code(
             image_path
         )
 
-
         evidence_parts = []
-
 
         if ocr.get("text"):
 
@@ -611,7 +594,6 @@ def analyze_image():
                 "Image OCR: "
                 + ocr["text"]
             )
-
 
         for value in qr.get(
             "data",
@@ -623,11 +605,9 @@ def analyze_image():
                 + value
             )
 
-
         combined = "\n".join(
             evidence_parts
         )
-
 
         if not combined.strip():
 
@@ -641,30 +621,23 @@ def analyze_image():
                 }
             ), 400
 
-
-        # ----------------------------------------------------
         # Analyze extracted content
-        # ----------------------------------------------------
-
         analysis_channel = (
             "url"
             if qr.get("data")
             else "sms"
         )
 
-
         result = analyze_with_ai(
             content=combined,
             channel=analysis_channel,
         )
-
 
         result = enrich_result(
             result,
             combined,
             "image",
         )
-
 
         result.update(
             {
@@ -685,11 +658,9 @@ def analyze_image():
             }
         )
 
-
         return jsonify(
             result
         )
-
 
     except Exception as exc:
 
@@ -698,7 +669,6 @@ def analyze_image():
                 "error": str(exc)
             }
         ), 500
-
 
     finally:
 
@@ -728,18 +698,13 @@ def analyze_instagram_reel():
         )
     ).strip()
 
-
     if video is None or video.filename == "":
 
         return jsonify(
             {
-                "error": (
-                    "Please upload an Instagram "
-                    "Reel video."
-                )
+                "error": "Please upload an Instagram Reel video."
             }
         ), 400
-
 
     filename_lower = (
         video.filename.lower()
@@ -759,13 +724,11 @@ def analyze_instagram_reel():
             }
         ), 400
 
-
     suffix = Path(
         secure_filename(
             video.filename
         )
     ).suffix.lower()
-
 
     filename = (
         f"{uuid.uuid4().hex}{suffix}"
@@ -775,29 +738,22 @@ def analyze_instagram_reel():
         UPLOAD_FOLDER / filename
     )
 
-
     try:
 
         video.save(
             video_path
         )
 
-
-        # ----------------------------------------------------
         # Reel extraction
-        # ----------------------------------------------------
-
         reel = analyze_reel(
             video_path,
             caption,
         )
 
-
         combined = reel.get(
             "combined_text",
             "",
         )
-
 
         if not combined.strip():
 
@@ -811,22 +767,38 @@ def analyze_instagram_reel():
                 }
             ), 400
 
+        
+        # Main trained ML analysis
+        try:
 
-        # ----------------------------------------------------
-        # AI analysis
-        # ----------------------------------------------------
+            result = analyze_with_trained_model(
+                combined,
+                "instagram"
+            )
 
-        result = analyze_with_ai(
-            content=combined,
-            channel="instagram",
-        )
+            result = enrich_result(
+                result,
+                combined,
+                "instagram",
+            )
 
+        except Exception as exc:
 
-        result = enrich_result(
-            result,
-            combined,
-            "instagram",
-        )
+            print(
+                "[ScamShield-X] Instagram ML failed. "
+                f"Using AI fallback: {exc}"
+            )
+
+            result = analyze_with_ai(
+                content=combined,
+                channel="instagram",
+            )
+
+            result = enrich_result(
+                result,
+                combined,
+                "instagram",
+            )
 
 
         result.update(
@@ -852,11 +824,9 @@ def analyze_instagram_reel():
             }
         )
 
-
         return jsonify(
             result
         )
-
 
     except Exception as exc:
 
@@ -865,7 +835,6 @@ def analyze_instagram_reel():
                 "error": str(exc)
             }
         ), 500
-
 
     finally:
 
@@ -905,4 +874,3 @@ if __name__ == "__main__":
         port=5000,
         debug=True,
     )
-    
